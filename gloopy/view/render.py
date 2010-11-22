@@ -1,6 +1,7 @@
 import logging
 from os.path import join
 
+import ctypes
 import numpy
 from OpenGL import GL
 
@@ -124,15 +125,20 @@ class Render(object):
                 #return a.ctypes.data_as(ctypes.POINTER(ptype)) # Ugly!
             #glVertexPointer(3, GL_FLOAT, 0, PointerToNumpy(VertexData)) 
             
-            NUMPY = False
+            NUMPY = True
             if NUMPY:
                 if not hasattr(item, 'matrix'):
                     matrix = item.orientation.get_matrix()
                     matrix[12:15] = item.position
-                    item.matrix = numpy.array(matrix[:], dtype=GL.GLfloat)
+                    item.nmatrix = numpy.array(matrix[:], dtype=GL.GLfloat)
+                    item.matrix = \
+                        numpy.ascontiguousarray(item.nmatrix).ctypes.data_as(
+                            ctypes.POINTER(gl.GLfloat)
+                        )
+                    print item.matrix
+                    print item.nmatrix
                 if item.position or item.orientation:
-                    from OpenGL.raw.GL import glMultMatrixf
-                    glMultMatrixf(item.matrix)
+                    gl.glMultMatrixf(item.matrix)
             else:
                 if not hasattr(item, 'matrix'):
                     matrix = Matrix4()
