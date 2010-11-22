@@ -120,25 +120,42 @@ class Render(object):
         for item in items:
             gl.glPushMatrix()
 
-            #def PointerToNumpy(a, ptype=ctypes.c_float):
-                #a = numpy.ascontiguousarray(a)  # Probably a NO-OP?
-                #return a.ctypes.data_as(ctypes.POINTER(ptype)) # Ugly!
-            #glVertexPointer(3, GL_FLOAT, 0, PointerToNumpy(VertexData)) 
-            
             NUMPY = True
             if NUMPY:
                 if not hasattr(item, 'matrix'):
                     matrix = item.orientation.get_matrix()
                     matrix[12:15] = item.position
-                    item.nmatrix = numpy.array(matrix[:], dtype=GL.GLfloat)
+                    # TODO: if we are to use numpy matrices properly (ie. use
+                    # them to store positions and rotations) then I
+                    # suspect 'matrix' needs to be be transposed, and the
+                    # ctypes access to it below should un-transpose it.
+                    #
+                    # Using 'numpy_matrix.T' below has no effect, presumably
+                    # numpy just sets a flag on the object or something,
+                    # leaving the underlying storage unchanged. :-(
+                    #
+                    # or possibly that's just because 'numpy_matrix' is an
+                    # array, not a matrix, so 'transposing' has no effect?
+                    item.numpy_matrix = numpy.array(
+                        matrix[:],
+                        dtype=GL.GLfloat
+                    )
                     item.matrix = \
-                        numpy.ascontiguousarray(item.nmatrix).ctypes.data_as(
+                        numpy.ascontiguousarray(
+                            item.numpy_matrix
+                        ).ctypes.data_as(
                             ctypes.POINTER(gl.GLfloat)
                         )
-                    print item.matrix
-                    print item.nmatrix
-                if item.position or item.orientation:
-                    gl.glMultMatrixf(item.matrix)
+                    print item.matrix[0]
+                    print item.matrix[1]
+                    print
+                else:
+                    if item.velocity:
+                        item.numpy_matrix[12:15] += [
+                            item.velocity.x / 100,
+                            item.velocity.y / 100,
+                            item.velocity.z / 100
+                        ]
             else:
                 if not hasattr(item, 'matrix'):
                     matrix = Matrix4()
@@ -147,9 +164,9 @@ class Render(object):
                     if item.orientation is not None:
                         matrix *= item.orientation.get_matrix()
                     item.matrix = matrix_to_ctypes(matrix)
-                if item.position or item.orientation:
-                    gl.glMultMatrixf(item.matrix)
-                    
+
+            if item.position or item.orientation:
+                gl.glMultMatrixf(item.matrix)
 
             gl.glVertexPointer(
                 Glyph.DIMENSIONS,
