@@ -1,6 +1,9 @@
 import logging
 from os.path import join
 
+import numpy
+from OpenGL import GL
+
 import pyglet
 from pyglet.event import EVENT_HANDLED
 from pyglet.gl import gl_info
@@ -103,16 +106,44 @@ class Render(object):
         gl.glEnableClientState(gl.GL_NORMAL_ARRAY)
         self.projection.set_perspective(45)
         self.modelview.set_world()
+
+        item = items.next()
+        gl.glColorPointer(
+            Color.NUM_COMPONENTS,
+            gl.GL_UNSIGNED_BYTE,
+            0,
+            item.glyph.glcolors
+        )
+        gl.glNormalPointer(gl.GL_FLOAT, 0, item.glyph.glnormals)
+
         for item in items:
             gl.glPushMatrix()
+
+            #def PointerToNumpy(a, ptype=ctypes.c_float):
+                #a = numpy.ascontiguousarray(a)  # Probably a NO-OP?
+                #return a.ctypes.data_as(ctypes.POINTER(ptype)) # Ugly!
+            #glVertexPointer(3, GL_FLOAT, 0, PointerToNumpy(VertexData)) 
             
-            matrix = Matrix4()
-            if item.position is not None:
-                matrix.translate(*item.position)
-            if item.orientation is not None:
-                matrix *= item.orientation.get_matrix()
-            if item.position or item.orientation:
-                gl.glMultMatrixf(matrix_to_ctypes(matrix))
+            NUMPY = False
+            if NUMPY:
+                if not hasattr(item, 'matrix'):
+                    matrix = item.orientation.get_matrix()
+                    matrix[12:15] = item.position
+                    item.matrix = numpy.array(matrix[:], dtype=GL.GLfloat)
+                if item.position or item.orientation:
+                    from OpenGL.raw.GL import glMultMatrixf
+                    glMultMatrixf(item.matrix)
+            else:
+                if not hasattr(item, 'matrix'):
+                    matrix = Matrix4()
+                    if item.position is not None:
+                        matrix.translate(*item.position)
+                    if item.orientation is not None:
+                        matrix *= item.orientation.get_matrix()
+                    item.matrix = matrix_to_ctypes(matrix)
+                if item.position or item.orientation:
+                    gl.glMultMatrixf(item.matrix)
+                    
 
             gl.glVertexPointer(
                 Glyph.DIMENSIONS,
@@ -120,13 +151,6 @@ class Render(object):
                 0,
                 item.glyph.glvertices
             )
-            gl.glColorPointer(
-                Color.NUM_COMPONENTS,
-                gl.GL_UNSIGNED_BYTE,
-                0,
-                item.glyph.glcolors
-            )
-            gl.glNormalPointer(gl.GL_FLOAT, 0, item.glyph.glnormals)
 
             gl.glDrawElements(
                 gl.GL_TRIANGLES,
