@@ -121,8 +121,8 @@ class Render(object):
             gl.glPushMatrix()
 
             NUMPY = True
-            if NUMPY:
-                if not hasattr(item, 'matrix'):
+            if not hasattr(item, 'matrix'):
+                if NUMPY:
                     matrix = item.orientation.get_matrix()
                     matrix[12:15] = item.position
                     # TODO: if we are to use numpy matrices properly (ie. use
@@ -146,24 +146,20 @@ class Render(object):
                         ).ctypes.data_as(
                             ctypes.POINTER(gl.GLfloat)
                         )
-                    print item.matrix[0]
-                    print item.matrix[1]
-                    print
                 else:
-                    if item.velocity:
-                        item.numpy_matrix[12:15] += [
-                            item.velocity.x / 100,
-                            item.velocity.y / 100,
-                            item.velocity.z / 100
-                        ]
-            else:
-                if not hasattr(item, 'matrix'):
                     matrix = Matrix4()
                     if item.position is not None:
                         matrix.translate(*item.position)
                     if item.orientation is not None:
                         matrix *= item.orientation.get_matrix()
                     item.matrix = matrix_to_ctypes(matrix)
+            else:
+                if item.velocity:
+                    item.numpy_matrix[12:15] += [
+                        item.velocity.x / 100,
+                        item.velocity.y / 100,
+                        item.velocity.z / 100
+                    ]
 
             if item.position or item.orientation:
                 gl.glMultMatrixf(item.matrix)

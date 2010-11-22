@@ -26,7 +26,7 @@ from gloopy.util.vectors import (
 )
 
 
-
+NUM_ITEMS = 512
 SIZE = 30
 
 
@@ -111,7 +111,7 @@ def main():
     gloopy = Gloopy()
     gloopy.init()
 
-    add_items(gloopy, 512)
+    add_items(gloopy, NUM_ITEMS)
     toggle_attr(gloopy, 'orientation', orientation_random)
 
     gloopy.world.background_color = Color.Random()
